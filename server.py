@@ -10,7 +10,7 @@ from mcp.types import ToolAnnotations
 load_dotenv()
 
 N8N_RESULT_URL = os.getenv("N8N_RESULT_URL", "").strip()
-DEFAULT_ANALYSIS_ID = os.getenv("DEFAULT_ANALYSIS_ID", "").strip()
+DEFAULT_ANALYSIS_ID = os.getenv("DEFAULT_ANALYSIS_ID", "1783849206722_8wgv0un8p1").strip()
 
 if not N8N_RESULT_URL:
     raise RuntimeError("N8N_RESULT_URL이 .env 파일에 없습니다.")
