@@ -10,7 +10,15 @@ from mcp.types import ToolAnnotations
 load_dotenv()
 
 N8N_RESULT_URL = os.getenv("N8N_RESULT_URL", "").strip()
-DEFAULT_ANALYSIS_ID = os.getenv("DEFAULT_ANALYSIS_ID", "1783849206722_8wgv0un8p1").strip()
+DEFAULT_ANALYSIS_ID = os.getenv(
+    "DEFAULT_ANALYSIS_ID",
+    "1783849206722_8wgv0un8p1"
+).strip()
+
+UPLOAD_GUIDE_URL = os.getenv(
+    "UPLOAD_GUIDE_URL",
+    "현재 데모에서는 샘플 매장 데이터를 사용합니다. 실제 사용 시 매출 엑셀 업로드 화면을 통해 분석을 시작할 수 있습니다."
+).strip()
 
 if not N8N_RESULT_URL:
     raise RuntimeError("N8N_RESULT_URL이 .env 파일에 없습니다.")
@@ -19,10 +27,13 @@ if not N8N_RESULT_URL:
 mcp = FastMCP(
     name="LocalBizPilot",
     instructions=(
-        "LocalBizPilot(로컬비즈파일럿) is an AI digital assistant for small business owners. "
-        "It provides monthly sales reports, recommended menus, promotion actions, "
-        "and poster asset metadata. If the user asks for last month's sales analysis "
-        "without providing an analysis_id, use the latest available analysis result."
+        "LocalBizPilot is an AI digital assistant for small business owners. "
+        "The real service flow starts when a store owner uploads a sales Excel file. "
+        "For the current PlayMCP demo, use the prepared sample store analysis result "
+        "when the user asks for sales analysis, recommended menus, promotion actions, "
+        "or poster results. Do not ask ordinary users for an analysis_id. "
+        "If the user asks to analyze their own store data, explain that they need to "
+        "upload a sales Excel file first."
     ),
     host="0.0.0.0",
     port=int(os.getenv("PORT", "8000")),
@@ -32,16 +43,9 @@ mcp = FastMCP(
 )
 
 
-async def fetch_result(analysis_id: str | None, view: str) -> dict[str, Any]:
-    effective_analysis_id = (analysis_id or "").strip() or DEFAULT_ANALYSIS_ID
-
-    if not effective_analysis_id:
-        raise ValueError(
-            "analysis_id is required unless DEFAULT_ANALYSIS_ID is configured."
-        )
-
+async def fetch_result(view: str) -> dict[str, Any]:
     payload = {
-        "analysis_id": effective_analysis_id,
+        "analysis_id": DEFAULT_ANALYSIS_ID,
         "view": view,
     }
 
@@ -50,9 +54,7 @@ async def fetch_result(analysis_id: str | None, view: str) -> dict[str, Any]:
             response = await client.post(
                 N8N_RESULT_URL,
                 json=payload,
-                headers={
-                    "ngrok-skip-browser-warning": "true"
-                },
+                headers={"ngrok-skip-browser-warning": "true"},
             )
             response.raise_for_status()
             data = response.json()
@@ -75,27 +77,31 @@ async def fetch_result(analysis_id: str | None, view: str) -> dict[str, Any]:
 
 
 @mcp.tool(
-    name="get_monthly_sales_summary",
-    title="Monthly Sales Summary",
+    name="get_demo_monthly_sales_report",
+    title="Demo Monthly Sales Report",
     description=(
-        "Gets a compact monthly sales summary from LocalBizPilot(로컬비즈파일럿). "
-        "Use this when the user asks for last month's sales report, monthly sales analysis, "
-        "or overall store performance. analysis_id is optional; if omitted, the latest "
-        "available analysis result is used."
+        "Use this tool when the user asks for last month's sales analysis, "
+        "monthly sales report, store performance, or sales summary. "
+        "No input is required. This returns a demo sales report based on a sample "
+        "store analysis. Explain that real users can upload their own sales Excel file "
+        "to receive a store-specific report."
     ),
     annotations=ToolAnnotations(
-        title="Monthly Sales Summary",
+        title="Demo Monthly Sales Report",
         readOnlyHint=True,
         destructiveHint=False,
         openWorldHint=True,
         idempotentHint=True,
     ),
 )
-async def get_monthly_sales_summary(analysis_id: str = "") -> dict[str, Any]:
-    result = await fetch_result(analysis_id, "summary")
+async def get_demo_monthly_sales_report() -> dict[str, Any]:
+    result = await fetch_result("summary")
 
     return {
-        "analysis_id": result.get("analysis_id"),
+        "service_note": (
+            "현재는 PlayMCP 테스트를 위해 샘플 매장 데이터를 기준으로 분석 결과를 제공합니다. "
+            "실제 사용 시에는 사장님이 매출 엑셀 파일을 업로드하면 해당 매장 기준으로 리포트가 생성됩니다."
+        ),
         "store_name": result.get("store_name"),
         "analysis_month": result.get("analysis_month"),
         "next_month": result.get("next_month"),
@@ -107,27 +113,30 @@ async def get_monthly_sales_summary(analysis_id: str = "") -> dict[str, Any]:
 
 
 @mcp.tool(
-    name="recommend_store_actions",
-    title="Recommended Store Actions",
+    name="get_demo_menu_and_promotion_actions",
+    title="Demo Menu and Promotion Actions",
     description=(
-        "Gets recommended menus and promotion actions from LocalBizPilot(로컬비즈파일럿). "
-        "Use this when the user asks what to sell next month, which menu to promote, "
-        "or what store actions to take. analysis_id is optional; if omitted, the latest "
-        "available analysis result is used."
+        "Use this tool when the user asks what menu to sell next month, "
+        "which menu to promote, what promotion strategy to use, or what actions "
+        "the store owner should take. No input is required. This returns demo "
+        "recommendations based on sales, time pattern, weather, holiday, and trend analysis."
     ),
     annotations=ToolAnnotations(
-        title="Recommended Store Actions",
+        title="Demo Menu and Promotion Actions",
         readOnlyHint=True,
         destructiveHint=False,
         openWorldHint=True,
         idempotentHint=True,
     ),
 )
-async def recommend_store_actions(analysis_id: str = "") -> dict[str, Any]:
-    result = await fetch_result(analysis_id, "actions")
+async def get_demo_menu_and_promotion_actions() -> dict[str, Any]:
+    result = await fetch_result("actions")
 
     return {
-        "analysis_id": result.get("analysis_id"),
+        "service_note": (
+            "현재는 샘플 매장 데이터를 기준으로 추천 메뉴와 홍보 액션을 보여드립니다. "
+            "실제 사용 시에는 업로드된 매출 데이터, 요일·시간대 패턴, 날씨, 공휴일, 검색트렌드를 함께 반영합니다."
+        ),
         "store_name": result.get("store_name"),
         "analysis_month": result.get("analysis_month"),
         "next_month": result.get("next_month"),
@@ -137,32 +146,66 @@ async def recommend_store_actions(analysis_id: str = "") -> dict[str, Any]:
 
 
 @mcp.tool(
-    name="get_poster_assets",
-    title="Poster Asset Metadata",
+    name="get_demo_poster_result",
+    title="Demo Poster Result",
     description=(
-        "Gets poster generation metadata from LocalBizPilot(로컬비즈파일럿). "
-        "Use this when the user asks whether a promotion poster was generated "
-        "or wants to check poster results. analysis_id is optional; if omitted, "
-        "the latest available analysis result is used."
+        "Use this tool when the user asks about promotion posters, poster results, "
+        "or whether a poster was generated. No input is required. This returns "
+        "demo poster metadata generated from the recommended menu score."
     ),
     annotations=ToolAnnotations(
-        title="Poster Asset Metadata",
+        title="Demo Poster Result",
         readOnlyHint=True,
         destructiveHint=False,
         openWorldHint=True,
         idempotentHint=True,
     ),
 )
-async def get_poster_assets(analysis_id: str = "") -> dict[str, Any]:
-    result = await fetch_result(analysis_id, "poster")
+async def get_demo_poster_result() -> dict[str, Any]:
+    result = await fetch_result("poster")
 
     return {
-        "analysis_id": result.get("analysis_id"),
+        "service_note": (
+            "현재는 샘플 매장 분석 결과를 바탕으로 생성된 포스터 결과를 보여드립니다. "
+            "실제 사용 시에는 추천 메뉴 점수를 기반으로 매장별 홍보 포스터가 생성됩니다."
+        ),
         "store_name": result.get("store_name"),
         "analysis_month": result.get("analysis_month"),
         "next_month": result.get("next_month"),
         "poster": result.get("poster"),
         "email_subject": result.get("email_subject"),
+    }
+
+
+@mcp.tool(
+    name="get_sales_file_upload_guide",
+    title="Sales File Upload Guide",
+    description=(
+        "Use this tool when the user asks how to analyze their own store data, "
+        "how to upload a sales file, or whether they can use their own Excel file. "
+        "No input is required. It explains the real service flow."
+    ),
+    annotations=ToolAnnotations(
+        title="Sales File Upload Guide",
+        readOnlyHint=True,
+        destructiveHint=False,
+        openWorldHint=False,
+        idempotentHint=True,
+    ),
+)
+async def get_sales_file_upload_guide() -> dict[str, Any]:
+    return {
+        "real_service_flow": [
+            "사장님이 월간 매출 엑셀 파일을 업로드합니다.",
+            "업로드된 매출 데이터가 PostgreSQL에 저장됩니다.",
+            "월간 매출, 카테고리별 매출, 인기·저회전 메뉴, 요일·시간대 패턴을 분석합니다.",
+            "날씨, 공휴일, 네이버 검색트렌드 데이터를 함께 반영합니다.",
+            "추천 메뉴를 점수화하고, 월간 리포트와 홍보 액션, 포스터 결과를 생성합니다."
+        ],
+        "demo_note": (
+            "현재 PlayMCP 테스트에서는 별도 파일 업로드 없이 샘플 매장 데이터를 기준으로 기능을 체험할 수 있습니다."
+        ),
+        "upload_guide": UPLOAD_GUIDE_URL,
     }
 
 
