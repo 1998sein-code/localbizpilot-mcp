@@ -20,9 +20,6 @@ UPLOAD_GUIDE_URL = os.getenv(
     "현재 PlayMCP 데모에서는 샘플 매장 데이터로 기능을 체험할 수 있습니다. 실제 서비스에서는 사장님이 매출 엑셀 파일을 업로드하면 해당 매장 기준으로 분석이 시작됩니다."
 ).strip()
 
-if not N8N_RESULT_URL:
-    raise RuntimeError("N8N_RESULT_URL이 .env 파일에 없습니다.")
-
 
 mcp = FastMCP(
     name="LocalBizPilot",
@@ -42,7 +39,64 @@ mcp = FastMCP(
 )
 
 
+DEMO_RESULTS: dict[str, dict[str, Any]] = {
+    "summary": {
+        "store_name": "카페 아들러",
+        "analysis_month": "2026-05",
+        "next_month": "2026-06",
+        "report_preview": (
+            "5월 한 달간 총 매출은 약 388만 원, 주문 건수는 241건입니다. "
+            "제과/빵과 커피가 전체 매출의 핵심 카테고리로 나타났으며, "
+            "아메리카노, 로쉐쿠키, 버터떡, 아들러커피가 주요 인기 메뉴로 확인되었습니다. "
+            "금요일 점심 시간대와 주말 오후 시간대에 매출이 집중되는 패턴이 나타났습니다. "
+            "실제 사용 시에는 사장님이 업로드한 매출 엑셀 데이터를 기준으로 월간 매출, "
+            "카테고리별 매출, 인기·저회전 메뉴, 요일·시간대별 판매 패턴을 분석합니다."
+        ),
+        "email": {
+            "to": "demo@example.com",
+            "subject": "카페 아들러 2026년 5월 매출 리포트"
+        },
+        "poster_generated": True,
+        "updated_at": "demo"
+    },
+    "actions": {
+        "store_name": "카페 아들러",
+        "analysis_month": "2026-05",
+        "next_month": "2026-06",
+        "recommendation_section": (
+            "다음 달 집중 메뉴로는 아메리카노와 제과/빵류를 추천합니다. "
+            "최근 판매량, 분석월 판매 성장률, 날씨 적합도, 네이버 검색트렌드, "
+            "공휴일·이벤트 적합도를 종합해 홍보 우선 메뉴를 도출합니다. "
+            "특히 커피와 디저트 조합은 객단가를 높이는 세트 구성으로 활용하기 좋습니다."
+        ),
+        "action_section": (
+            "금요일 점심 시간대와 주말 오후 피크타임에 인기 메뉴를 전면 배치하고, "
+            "SNS에는 계절 메뉴와 세트 구성을 강조하는 홍보 문구를 활용하는 것이 좋습니다. "
+            "공휴일이나 이벤트일에는 선물용 세트, 예약 안내, 한정 메뉴 메시지를 함께 제안합니다. "
+            "저회전 메뉴는 재고 부담을 줄이기 위해 판매 지속 여부를 점검하거나 세트 구성으로 재배치하는 전략이 적합합니다."
+        )
+    },
+    "poster": {
+        "store_name": "카페 아들러",
+        "analysis_month": "2026-05",
+        "next_month": "2026-06",
+        "poster": {
+            "generated": True,
+            "file_name": "demo_poster.png",
+            "mime_type": "image/png",
+            "file_size": "demo"
+        },
+        "email_subject": "카페 아들러 2026년 5월 매출 리포트"
+    }
+}
+
+
 async def fetch_result(view: str) -> dict[str, Any]:
+    fallback = DEMO_RESULTS.get(view, {})
+
+    if not N8N_RESULT_URL:
+        return fallback
+
     payload = {
         "analysis_id": DEFAULT_ANALYSIS_ID,
         "view": view,
@@ -58,21 +112,13 @@ async def fetch_result(view: str) -> dict[str, Any]:
             response.raise_for_status()
             data = response.json()
 
-    except httpx.TimeoutException as exc:
-        raise RuntimeError("LocalBizPilot result lookup timed out.") from exc
+        if data.get("success") and isinstance(data.get("result"), dict):
+            return data.get("result", {})
 
-    except httpx.HTTPStatusError as exc:
-        raise RuntimeError(
-            f"LocalBizPilot result lookup failed: HTTP {exc.response.status_code}"
-        ) from exc
+        return fallback
 
-    except ValueError as exc:
-        raise RuntimeError("LocalBizPilot result API returned invalid JSON.") from exc
-
-    if not data.get("success"):
-        raise RuntimeError("LocalBizPilot result API returned an unsuccessful response.")
-
-    return data.get("result", {})
+    except Exception:
+        return fallback
 
 
 @mcp.tool(
