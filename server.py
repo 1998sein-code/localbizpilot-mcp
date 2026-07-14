@@ -79,6 +79,7 @@ async def fetch_result(view: str) -> dict[str, Any]:
     name="get_monthly_sales_summary",
     title="Monthly Sales Summary",
     description=(
+        "소상공인을 위한 매출 분석 & 포스터 생성: "
         "Use this tool when the user asks for last month's sales report, monthly sales analysis, "
         "store performance, or sales summary. No input is required. "
         "It returns a demo monthly report based on a sample store. "
@@ -114,6 +115,7 @@ async def get_monthly_sales_summary() -> dict[str, Any]:
     name="recommend_store_actions",
     title="Recommended Store Actions",
     description=(
+        "소상공인을 위한 매출 분석 & 포스터 생성: "
         "Use this tool when the user asks for next month's recommended menu, promotion strategy, "
         "menu to focus on, or store actions. No input is required. "
         "It returns demo recommendations based on sales, day and time pattern, weather, holiday, "
@@ -147,6 +149,7 @@ async def recommend_store_actions() -> dict[str, Any]:
     name="get_poster_assets",
     title="Poster Asset Metadata",
     description=(
+        "소상공인을 위한 매출 분석 & 포스터 생성: "
         "Use this tool when the user asks for promotion poster results, poster generation, "
         "or whether a poster was created. No input is required. "
         "It returns demo poster metadata generated from the recommended menu score."
@@ -179,6 +182,7 @@ async def get_poster_assets() -> dict[str, Any]:
     name="get_sales_file_upload_guide",
     title="Sales File Upload Guide",
     description=(
+        "소상공인을 위한 매출 분석 & 포스터 생성: "
         "Use this tool when the user asks how to analyze their own store data, "
         "how to upload a sales Excel file, or how the real service starts. "
         "No input is required. It explains the upload-based service flow."
